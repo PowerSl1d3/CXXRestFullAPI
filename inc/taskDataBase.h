@@ -6,6 +6,7 @@
 #define CXXRESTFULLAPI_TASKDATABASE_H
 
 #include <string>
+#include <memory>
 
 #include <mysql_connection.h>
 #include <mysql_driver.h>
@@ -17,14 +18,11 @@
 
 class taskDataBase {
 private:
-    sql::mysql::MySQL_Driver* driver;
-    sql::Connection* con;
-    sql::Statement* stmt;
-    sql::ResultSet* res;
+    const std::shared_ptr<sql::Statement> stmt;
 public:
-    taskDataBase();
-    void createTask(const int userTaskId, const std::string& text);
-    sql::ResultSet* getToDo(const int userTaskId);
+    taskDataBase(std::shared_ptr<sql::Statement>);
+    void createTask(const int userId, const std::string& text);
+    std::unique_ptr<sql::ResultSet> getToDo(const int userId);
     void deleteToDo(const int userTaskId, const int todoId);
     void updateToDo(const int todoId, const int userTaskId, const std::string& text);
 };

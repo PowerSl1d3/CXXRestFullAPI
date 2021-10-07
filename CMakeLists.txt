@@ -11,8 +11,15 @@ if(OPENSSL_FOUND)
     include_directories(${OPENSSL_INCLUDE_DIR})
 endif()
 
-find_package(Boost REQUIRED)
+add_subdirectory(lib)
 
-add_executable(CXXRestFullAPI main.cpp DataBase.h userDataBase.h userDataBase.cpp taskDataBase.cpp taskDataBase.h dataBase.cpp dataBase.h)
+find_package(Boost REQUIRED COMPONENTS program_options)
 
-target_link_libraries(CXXRestFullAPI PUBLIC ${Boost_LIBRARIES} pthread mysqlcppconn)
+add_executable(CXXRestFullAPI main.cpp)
+
+target_link_libraries(CXXRestFullAPI PUBLIC
+        ${Boost_LIBRARIES}
+        pthread
+        dataBase)
+
+target_include_directories(CXXRestFullAPI PUBLIC inc)
