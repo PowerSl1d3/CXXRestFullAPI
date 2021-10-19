@@ -13,6 +13,7 @@ add_library(dataBase SHARED
         dataBase.cpp
         taskDataBase.cpp
         userDataBase.cpp
+        fileDataBase.cpp
         connection.cpp
         sha256.cpp
         cryptographer.cpp)

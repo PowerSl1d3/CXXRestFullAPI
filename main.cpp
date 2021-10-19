@@ -1,5 +1,6 @@
 #include <iostream>
 #include <sstream>
+#include <filesystem>
 
 #include <boost/program_options.hpp>
 
@@ -16,9 +17,10 @@
 
 std::pair<std::string, std::string> parseDecryptedToken(const std::string& token) {
     size_t separator_pos = token.find('_');
-    std::string::const_iterator it = token.cbegin() +
-                               (separator_pos == std::basic_string<char>::npos ?
-                                throw std::runtime_error("Incorrect token.") : separator_pos);
+    if (separator_pos == std::basic_string<char>::npos) {
+        throw std::runtime_error("Incorrect token.");
+    }
+    std::string::const_iterator it = token.cbegin() +  separator_pos;
     return {{token.begin(), it}, {(it + 1), token.end()}};
 }
 
@@ -29,6 +31,7 @@ int main(int argc, char* argv[]) {
     opt::options_description desc("All options");
 
     desc.add_options()
+            ("hostname,h", opt::value<std::string>()->required(), "MySQL hostname connection")
             ("username,u", opt::value<std::string>()->required()->default_value("root"), "Username for sql server")
             ("password,p", opt::value<std::string>()->required(), "Password for sql server")
             ("help,h", "Produce help message");
@@ -60,7 +63,11 @@ int main(int argc, char* argv[]) {
     }
 
     crow::SimpleApp app; //define your crow application
-    dataBase db(vm["username"].as<std::string>(), vm["password"].as<std::string>());
+    dataBase db(
+            vm["hostname"].as<std::string>(),
+            vm["username"].as<std::string>(),
+            vm["password"].as<std::string>(),
+            "files");
 #ifdef TEST_DATABASE
 #define TEST_DATABASE
     db.createUser("admin", sha256::compute("admin"));
@@ -72,7 +79,6 @@ int main(int argc, char* argv[]) {
     db.postToDo("smarty", smarty_password, "Do Androids Dream of Electric Sheep?");
 #endif
 
-    //define your endpoint at the root directory
     CROW_ROUTE(app, "/")([](){
         return "Hello world!";
     });
@@ -114,7 +120,7 @@ int main(int argc, char* argv[]) {
         std::ostringstream oss;
 
         for (const auto& [id, text] : todoList) {
-            oss << id << ' ' << text << "\n";
+            oss << id << '#' << text << "\n";
         }
 
         return crow::response(oss.str());
@@ -179,6 +185,96 @@ int main(int argc, char* argv[]) {
         }
 
         return crow::response("Task deleted!");
+    });
+
+    CROW_ROUTE(app, "/files").methods(crow::HTTPMethod::POST)([&db](const crow::request& req){
+        const std::string token = req.headers.find("token")->second;
+        const std::string filename = req.headers.find("filename")->second;
+        const std::string file_type = req.headers.find("Content-Type")->second;
+
+        if (token.empty()) {
+            return crow::response(404);
+        }
+
+        const auto& [username, password] = parseDecryptedToken(
+                cryptographer::decrypt(token)
+        );
+
+        //Check file size: if is to big - terminate saving file
+        if (req.body.size() > 10'485'760) {
+            return crow::response(404, "File is too big");
+        }
+
+        std::ofstream ofs("files/" + username + "/" + filename);
+        ofs << req.body;
+        ofs.close();
+
+        db.postFile(username, password, filename, file_type);
+
+        return crow::response("File successful got!");
+    });
+
+    CROW_ROUTE(app, "/files").methods(crow::HTTPMethod::GET)([&db](const crow::request& req){
+        const std::string token = req.headers.find("token")->second;
+
+        if (token.empty()) {
+            return crow::response(404);
+        }
+
+        const auto& [username, password] = parseDecryptedToken(
+                cryptographer::decrypt(token)
+        );
+
+        auto fileList = db.getFiles(username, password);
+        std::ostringstream oss;
+
+        for (const auto& [id, filename, file_extension]: fileList) {
+            oss << id << ' ' << filename << ' ' << file_extension << '\n';
+        }
+
+        return crow::response(oss.str());
+    });
+
+    CROW_ROUTE(app, "/files/<string>").methods(crow::HTTPMethod::GET)([&db](const crow::request& req,
+            const std::string& filename){
+
+        const std::string token = req.headers.find("token")->second;
+        const std::string file_type = req.headers.find("Content-Type")->second;
+
+        if (token.empty()) {
+            return crow::response(404);
+        }
+
+        const auto& [username, password] = parseDecryptedToken(
+                cryptographer::decrypt(token)
+        );
+
+        std::string file = db.getFile(username, password, filename, file_type);
+        std::ifstream ifs("files/" + username + "/" + file);
+        std::ostringstream buffer;
+        buffer << ifs.rdbuf();
+
+        return crow::response(buffer.str());
+    });
+
+    CROW_ROUTE(app, "/files/<string>").methods(crow::HTTPMethod::DELETE)([&db](const crow::request& req,
+            const std::string& filename){
+
+        const std::string token = req.headers.find("token")->second;
+        const std::string file_type = req.headers.find("Content-Type")->second;
+
+        if (token.empty()) {
+            return crow::response(404);
+        }
+
+        const auto& [username, password] = parseDecryptedToken(
+                cryptographer::decrypt(token)
+        );
+
+        db.deleteFile(username, password, filename, file_type);
+        std::filesystem::remove("files/" + username + "/" + filename);
+
+        return crow::response("File successful deleted!");
     });
 
     app.bindaddr("127.0.0.1")
