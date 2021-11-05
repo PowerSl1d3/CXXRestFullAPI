@@ -205,8 +205,14 @@ int main(int argc, char* argv[]) {
             return crow::response(404, "File is too big");
         }
 
+        auto file = crow::json::load(req.body);
+
+        if (!file) {
+            crow::response(404);
+        }
+
         std::ofstream ofs("files/" + username + "/" + filename);
-        ofs << req.body;
+        ofs << file["content"].s();
         ofs.close();
 
         db.postFile(username, password, filename, file_type);
@@ -215,6 +221,7 @@ int main(int argc, char* argv[]) {
     });
 
     CROW_ROUTE(app, "/files").methods(crow::HTTPMethod::GET)([&db](const crow::request& req){
+        //TODO: throw error if user haven't files
         const std::string token = req.headers.find("token")->second;
 
         if (token.empty()) {
@@ -229,7 +236,7 @@ int main(int argc, char* argv[]) {
         std::ostringstream oss;
 
         for (const auto& [id, filename, file_extension]: fileList) {
-            oss << id << ' ' << filename << ' ' << file_extension << '\n';
+            oss << id << '#' << filename << '#' << file_extension << '\n';
         }
 
         return crow::response(oss.str());
