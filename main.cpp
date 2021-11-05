@@ -25,7 +25,6 @@ std::pair<std::string, std::string> parseDecryptedToken(const std::string& token
 }
 
 int main(int argc, char* argv[]) {
-
     namespace opt = boost::program_options;
 
     opt::options_description desc("All options");
@@ -39,8 +38,7 @@ int main(int argc, char* argv[]) {
     opt::variables_map vm;
 
     try {
-        opt::store(opt::parse_config_file<char>("sql.cfg", desc), vm
-        );
+        opt::store(opt::parse_config_file<char>("sql.cfg", desc), vm);
     } catch (const opt::reading_file& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;
@@ -49,20 +47,16 @@ int main(int argc, char* argv[]) {
     try {
         opt::notify(vm);
     } catch (const opt::required_option& e) {
-
         std::cerr << e.what() << std::endl;
         return 2;
-
     }
 
     if (vm.count("help")) {
-
         std::cout << desc << std::endl;
         return 1;
-
     }
 
-    crow::SimpleApp app; //define your crow application
+    crow::SimpleApp app;
     dataBase db(
             vm["hostname"].as<std::string>(),
             vm["username"].as<std::string>(),
@@ -108,9 +102,7 @@ int main(int argc, char* argv[]) {
         std::vector<std::pair<int, std::string>> todoList;
 
         try {
-            const auto& [username, password] = parseDecryptedToken(
-                    cryptographer::decrypt(x["token"].s())
-                    );
+            const auto& [username, password] = parseDecryptedToken(cryptographer::decrypt(x["token"].s()));
             db.checkToken(username, password);
             todoList = db.getToDo(username, password);
         } catch (const std::runtime_error& e) {
@@ -134,9 +126,7 @@ int main(int argc, char* argv[]) {
         }
 
         try {
-            const auto& [username, password] = parseDecryptedToken(
-                    cryptographer::decrypt(x["token"].s())
-            );
+            const auto& [username, password] = parseDecryptedToken(cryptographer::decrypt(x["token"].s()));
             db.checkToken(username, password);
             db.postToDo(username, password, x["text"].s());
         } catch (const std::runtime_error& e) {
@@ -154,9 +144,7 @@ int main(int argc, char* argv[]) {
         }
 
         try {
-            const auto& [username, password] = parseDecryptedToken(
-                    cryptographer::decrypt(x["token"].s())
-            );
+            const auto& [username, password] = parseDecryptedToken(cryptographer::decrypt(x["token"].s()));
             db.checkToken(username, password);
             db.updateTodo(username, password, id, x["text"].s());
         } catch (const std::runtime_error& e) {
@@ -167,17 +155,13 @@ int main(int argc, char* argv[]) {
     });
 
     CROW_ROUTE(app, "/todo/<int>").methods(crow::HTTPMethod::DELETE)([&db](const crow::request& req, int id){
-
         auto x = crow::json::load(req.body);
-
         if (!x) {
             crow::response(404);
         }
 
         try {
-            const auto& [username, password] = parseDecryptedToken(
-                    cryptographer::decrypt(x["token"].s())
-            );
+            const auto& [username, password] = parseDecryptedToken(cryptographer::decrypt(x["token"].s()));
             db.checkToken(username, password);
             db.deleteToDo(username, password, id);
         } catch (const std::runtime_error& e) {
@@ -196,11 +180,9 @@ int main(int argc, char* argv[]) {
             return crow::response(404);
         }
 
-        const auto& [username, password] = parseDecryptedToken(
-                cryptographer::decrypt(token)
-        );
+        const auto& [username, password] = parseDecryptedToken(cryptographer::decrypt(token));
 
-        //Check file size: if is to big - terminate saving file
+        // Check file size: if is to big - terminate saving file
         if (req.body.size() > 10'485'760) {
             return crow::response(404, "File is too big");
         }
@@ -221,21 +203,19 @@ int main(int argc, char* argv[]) {
     });
 
     CROW_ROUTE(app, "/files").methods(crow::HTTPMethod::GET)([&db](const crow::request& req){
-        //TODO: throw error if user haven't files
+        // TODO(smarty): throw error if user haven't files
         const std::string token = req.headers.find("token")->second;
 
         if (token.empty()) {
             return crow::response(404);
         }
 
-        const auto& [username, password] = parseDecryptedToken(
-                cryptographer::decrypt(token)
-        );
+        const auto& [username, password] = parseDecryptedToken(cryptographer::decrypt(token));
 
         auto fileList = db.getFiles(username, password);
         std::ostringstream oss;
 
-        for (const auto& [id, filename, file_extension]: fileList) {
+        for (const auto& [id, filename, file_extension] : fileList) {
             oss << id << '#' << filename << '#' << file_extension << '\n';
         }
 
@@ -244,7 +224,6 @@ int main(int argc, char* argv[]) {
 
     CROW_ROUTE(app, "/files/<string>").methods(crow::HTTPMethod::GET)([&db](const crow::request& req,
             const std::string& filename){
-
         const std::string token = req.headers.find("token")->second;
         const std::string file_type = req.headers.find("Content-Type")->second;
 
@@ -252,9 +231,7 @@ int main(int argc, char* argv[]) {
             return crow::response(404);
         }
 
-        const auto& [username, password] = parseDecryptedToken(
-                cryptographer::decrypt(token)
-        );
+        const auto& [username, password] = parseDecryptedToken(cryptographer::decrypt(token));
 
         std::string file = db.getFile(username, password, filename, file_type);
         std::ifstream ifs("files/" + username + "/" + file);
@@ -266,7 +243,6 @@ int main(int argc, char* argv[]) {
 
     CROW_ROUTE(app, "/files/<string>").methods(crow::HTTPMethod::DELETE)([&db](const crow::request& req,
             const std::string& filename){
-
         const std::string token = req.headers.find("token")->second;
         const std::string file_type = req.headers.find("Content-Type")->second;
 
@@ -274,9 +250,7 @@ int main(int argc, char* argv[]) {
             return crow::response(404);
         }
 
-        const auto& [username, password] = parseDecryptedToken(
-                cryptographer::decrypt(token)
-        );
+        const auto& [username, password] = parseDecryptedToken(cryptographer::decrypt(token));
 
         db.deleteFile(username, password, filename, file_type);
         std::filesystem::remove("files/" + username + "/" + filename);

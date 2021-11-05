@@ -4,7 +4,7 @@
 
 #include "userDataBase.h"
 
-userDataBase::userDataBase(const std::shared_ptr<sql::Connection> con) :
+userDataBase::userDataBase(const std::shared_ptr<sql::Connection>& con) :
         con_(con),
         stmt_(con->createStatement())
 {

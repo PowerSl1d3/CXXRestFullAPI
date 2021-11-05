@@ -21,7 +21,7 @@ private:
     const std::unique_ptr<sql::Statement> stmt_;
     std::unique_ptr<sql::PreparedStatement> preparedStatement_;
 public:
-    userDataBase(const std::shared_ptr<sql::Connection>);
+    userDataBase(const std::shared_ptr<sql::Connection>&);
     //TODO: change method to new architecture of data base
     bool checkUserAlreadyExist(const std::string& username, const std::string& password);
     void createUser(const std::string& username, const std::string& password);
