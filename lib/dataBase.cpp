@@ -4,16 +4,25 @@
 
 #include "dataBase.h"
 
-dataBase::dataBase(const std::string& username, const std::string& password):
-pSQLCon(std::make_unique<connection>(username, password)),
-uDB(std::make_unique<userDataBase>(pSQLCon->getStatement())),
-tDB(std::make_unique<taskDataBase>(pSQLCon->getStatement()))
-{}
+dataBase::dataBase(const std::string& hostname,
+                   const std::string& username,
+                   const std::string& password,
+                   const std::string& filesRoot_):
+pSQLCon(std::make_unique<connection>(hostname, username, password)),
+uDB(std::make_unique<userDataBase>(pSQLCon->getConnection())),
+tDB(std::make_unique<taskDataBase>(pSQLCon->getConnection())),
+fDB(std::make_unique<fileDataBase>(pSQLCon->getConnection())),
+filesRoot(filesRoot_)
+{
+    std::filesystem::remove_all(filesRoot);
+    std::filesystem::create_directory(filesRoot);
+}
 
 void dataBase::createUser(const std::string& username, const std::string& password) {
     if (!uDB->checkUserAlreadyExist(username, password)) {
         uDB->createUser(username, password);
     }
+    std::filesystem::create_directory(std::filesystem::path(filesRoot)/username);
 }
 
 void dataBase::checkToken(const std::string &username, const std::string &password) {
@@ -22,7 +31,8 @@ void dataBase::checkToken(const std::string &username, const std::string &passwo
     }
 }
 
-std::vector<std::pair<int, std::string>> dataBase::getToDo(const std::string& username, const std::string& password) {
+std::vector<std::pair<int, std::string>> dataBase::getToDo(const std::string& username,
+                                                           const std::string& password) {
     std::unique_ptr<sql::ResultSet> taskIdQuery = uDB->getUserId(username, password);
     taskIdQuery->next();
     int taskId = taskIdQuery->getInt("id");
@@ -39,7 +49,9 @@ std::vector<std::pair<int, std::string>> dataBase::getToDo(const std::string& us
     return taskList;
 }
 
-void dataBase::postToDo(const std::string& username, const std::string& password, const std::string& text) {
+void dataBase::postToDo(const std::string& username,
+                        const std::string& password,
+                        const std::string& text) {
     std::unique_ptr<sql::ResultSet> taskIdQuery = uDB->getUserId(username, password);
     taskIdQuery->next();
     int taskId = taskIdQuery->getInt("id");
@@ -47,7 +59,9 @@ void dataBase::postToDo(const std::string& username, const std::string& password
     tDB->createTask(taskId, text);
 }
 
-void dataBase::deleteToDo(const std::string& username, const std::string& password, const int todoId) {
+void dataBase::deleteToDo(const std::string& username,
+                          const std::string& password,
+                          const int todoId) {
     std::unique_ptr<sql::ResultSet> taskIdQuery = uDB->getUserId(username, password);
     taskIdQuery->next();
     int taskId = taskIdQuery->getInt("id");
@@ -65,7 +79,10 @@ void dataBase::deleteToDo(const std::string& username, const std::string& passwo
     tDB->deleteToDo(taskId, todoId);
 }
 
-void dataBase::updateTodo(const std::string& username, const std::string& password, const int todoId, const std::string& text) {
+void dataBase::updateTodo(const std::string& username,
+                          const std::string& password,
+                          const int todoId,
+                          const std::string& text) {
     std::unique_ptr<sql::ResultSet> taskIdQuery = uDB->getUserId(username, password);
     taskIdQuery->next();
     int taskId = taskIdQuery->getInt("id");
@@ -81,4 +98,59 @@ void dataBase::updateTodo(const std::string& username, const std::string& passwo
         throw std::runtime_error("User haven't tasks with this id.");
     }
     tDB->updateToDo(todoId, taskId, text);
+}
+
+void dataBase::postFile(const std::string& username,
+                        const std::string& password,
+                        const std::string& filename,
+                        const std::string& file_type) {
+    std::unique_ptr<sql::ResultSet> fileIdQuery = uDB->getUserId(username, password);
+    fileIdQuery->next();
+    int fileId = fileIdQuery->getInt("id");
+    fDB->createFile(fileId, filename, file_type);
+}
+
+std::vector<std::tuple<int, std::string, std::string>> dataBase::getFiles(const std::string &username,
+                                                            const std::string &password) {
+    std::unique_ptr<sql::ResultSet> fileIdQuery = uDB->getUserId(username, password);
+    fileIdQuery->next();
+    int fileId = fileIdQuery->getInt("id");
+    std::unique_ptr<sql::ResultSet> fileListQuery = fDB->getFiles(fileId);
+    if (!fileListQuery->rowsCount()) {
+        throw std::runtime_error("User haven't files.");
+    }
+    std::vector<std::tuple<int, std::string, std::string>> fileList;
+    fileList.reserve(fileListQuery->rowsCount());
+    while (fileListQuery->next()) {
+        fileList.emplace_back(fileListQuery->getInt("id"),
+                              fileListQuery->getString("filename"),
+                              fileListQuery->getString("type"));
+    }
+
+    return fileList;
+}
+
+std::string dataBase::getFile(const std::string &username,
+                              const std::string &password,
+                              const std::string &filename,
+                              const std::string& file_type) {
+    std::unique_ptr<sql::ResultSet> fileIdQuery = uDB->getUserId(username, password);
+    fileIdQuery->next();
+    int fileId = fileIdQuery->getInt("id");
+    std::unique_ptr<sql::ResultSet> fileListQuery = fDB->getFile(fileId, filename, file_type);
+    fileListQuery->next();
+    if (!fileListQuery->rowsCount()) {
+        throw std::runtime_error("User haven't files.");
+    }
+    return fileListQuery->getString("filename");
+}
+
+void dataBase::deleteFile(const std::string &username,
+                          const std::string &password,
+                          const std::string &filename,
+                          const std::string& file_type) {
+    std::unique_ptr<sql::ResultSet> fileIdQuery = uDB->getUserId(username, password);
+    fileIdQuery->next();
+    int fileId = fileIdQuery->getInt("id");
+    fDB->deleteFile(fileId, filename, file_type);
 }

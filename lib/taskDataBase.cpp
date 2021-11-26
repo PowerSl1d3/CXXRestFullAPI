@@ -4,37 +4,44 @@
 
 #include "taskDataBase.h"
 
-taskDataBase::taskDataBase(std::shared_ptr<sql::Statement> stmt_):
-stmt(stmt_)
+taskDataBase::taskDataBase(std::shared_ptr<sql::Connection> con):
+        con_(con),
+        stmt_(con->createStatement())
 {
-    stmt->execute("USE mysql");
-    stmt->execute("DROP TABLE IF EXISTS todoTask");
-    stmt->execute("CREATE TABLE todoTask(id INT PRIMARY KEY AUTO_INCREMENT,"
+    stmt_->execute("USE mysql");
+    stmt_->execute("DROP TABLE IF EXISTS todoTask");
+    stmt_->execute("CREATE TABLE todoTask(id INT PRIMARY KEY AUTO_INCREMENT,"
                   " user_id INT, text VARCHAR(256));");
 }
 
 void taskDataBase::createTask(const int userId, const std::string& text) {
-    stmt->execute("INSERT INTO todoTask(user_id, text) VALUES ('"
-                  + std::to_string(userId) +
-                  "', '"
-                  + text +
-                  +"')");
+    const std::string statement = "INSERT INTO todoTask(user_id, text) VALUES (?, ?)";
+    preparedStatement_.reset(con_->prepareStatement(statement));
+    preparedStatement_->setInt(1, userId);
+    preparedStatement_->setString(2, text);
+    preparedStatement_->execute();
 }
 
 std::unique_ptr<sql::ResultSet> taskDataBase::getToDo(const int userId) {
-    return std::unique_ptr<sql::ResultSet>(
-            stmt->executeQuery("SELECT id, text FROM todoTask WHERE user_id = "
-            + std::to_string(userId))
-    );
+    const std::string statement = "SELECT id, text FROM todoTask WHERE user_id = ?";
+    preparedStatement_.reset(con_->prepareStatement(statement));
+    preparedStatement_->setInt(1, userId);
+    return std::unique_ptr<sql::ResultSet>(preparedStatement_->executeQuery());
 }
 
 void taskDataBase::deleteToDo(const int userTaskId, const int todoId) {
-    stmt->execute("DELETE FROM todoTask WHERE id = " + std::to_string(todoId)
-    + " AND user_id = " + std::to_string(userTaskId));
+    const std::string statement = "DELETE FROM todoTask WHERE id = ? AND user_id = ?";
+    preparedStatement_.reset(con_->prepareStatement(statement));
+    preparedStatement_->setInt(1, todoId);
+    preparedStatement_->setInt(2, userTaskId);
+    preparedStatement_->execute();
 }
 
 void taskDataBase::updateToDo(const int todoId, const int userTaskId, const std::string &text) {
-    stmt->execute("UPDATE todoTask SET text = '"
-    + text +
-    "' WHERE id = " + std::to_string(todoId) + " AND user_id = " + std::to_string(userTaskId));
+    const std::string statement = "UPDATE todoTask SET text = ? WHERE id = ? AND user_id = ?";
+    preparedStatement_.reset(con_->prepareStatement(statement));
+    preparedStatement_->setString(1, text);
+    preparedStatement_->setInt(2, todoId);
+    preparedStatement_->setInt(3, userTaskId);
+    preparedStatement_->execute();
 }

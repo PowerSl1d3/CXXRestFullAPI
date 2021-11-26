@@ -18,9 +18,11 @@
 
 class taskDataBase {
 private:
-    const std::shared_ptr<sql::Statement> stmt;
+    const std::shared_ptr<sql::Connection> con_;
+    const std::unique_ptr<sql::Statement> stmt_;
+    std::unique_ptr<sql::PreparedStatement> preparedStatement_;
 public:
-    taskDataBase(std::shared_ptr<sql::Statement>);
+    taskDataBase(std::shared_ptr<sql::Connection>);
     void createTask(const int userId, const std::string& text);
     std::unique_ptr<sql::ResultSet> getToDo(const int userId);
     void deleteToDo(const int userTaskId, const int todoId);
