@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(CXXRestFullAPI VERSION 0.0.1)
 
+find_package(Crow REQUIRED)
 find_package(Threads)
 find_package(ZLIB)
 find_package(OpenSSL)
@@ -17,7 +18,7 @@ add_executable(Test test.cpp)
 set_target_properties(CXXRestFullAPI Test PROPERTIES
         CXX_STANDARD 17
         CXX_STANDARD_REQUIRED ON
-        COMPILE_OPTIONS "-Wpedantic;-Wall;-Werror"
+        COMPILE_OPTIONS "-Wpedantic;-Wall"
         )
 
 set_target_properties(Test PROPERTIES
@@ -26,6 +27,7 @@ set_target_properties(Test PROPERTIES
 
 target_link_libraries(CXXRestFullAPI PUBLIC
         ${Boost_LIBRARIES}
+        Crow::Crow
         pthread
         dataBase)
 
