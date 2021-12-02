@@ -25,4 +25,8 @@ BOOST_AUTO_TEST_CASE(example2) {
     BOOST_CHECK(2 == 2);
 }
 
+BOOST_AUTO_TEST_CASE(example3) {
+    BOOST_CHECK(3 == 3);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
