@@ -1,17 +1,14 @@
 #include <iostream>
-#include <sstream>
 #include <filesystem>
 
 #include <boost/program_options.hpp>
 
 #include "userDataBase.h"
-#include "taskDataBase.h"
 #include "dataBase.h"
 #include "sha256.h"
 #include "cryptographer.h"
 
-#define CROW_MAIN
-#include <crow_all.h>
+#include <crow/app.h>
 
 #define TEST_DATABASE
 
@@ -20,7 +17,7 @@ std::pair<std::string, std::string> parseDecryptedToken(const std::string& token
     if (separator_pos == std::basic_string<char>::npos) {
         throw std::runtime_error("Incorrect token.");
     }
-    std::string::const_iterator it = token.cbegin() +  separator_pos;
+    std::string::const_iterator it = token.cbegin() +  static_cast<int32_t>(separator_pos);
     return {{token.begin(), it}, {(it + 1), token.end()}};
 }
 
@@ -62,6 +59,7 @@ int main(int argc, char* argv[]) {
             vm["username"].as<std::string>(),
             vm["password"].as<std::string>(),
             "files");
+
 #ifdef TEST_DATABASE
 #define TEST_DATABASE
     db.createUser("admin", sha256::compute("admin"));
@@ -71,6 +69,7 @@ int main(int argc, char* argv[]) {
     db.postToDo("admin", admin_password, "create my CXX RestFullApi");
     db.postToDo("admin", admin_password, "tell Roma what I did");
     db.postToDo("smarty", smarty_password, "Do Androids Dream of Electric Sheep?");
+
 #endif
 
     CROW_ROUTE(app, "/")([](){
