@@ -1,0 +1,12 @@
+dist: bionic
+language: cpp
+compiler: gcc
+addons:
+  apt:
+    packages:
+      - libboost-test-dev
+script:
+  - cmake .
+  - cmake --build .
+  - cmake --build . --target test
+  - cmake --build . --target package
