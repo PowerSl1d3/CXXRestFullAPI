@@ -24,40 +24,70 @@ std::pair<std::string, std::string> parseDecryptedToken(const std::string& token
 int main(int argc, char* argv[]) {
     namespace opt = boost::program_options;
 
-    opt::options_description desc("All options");
+    opt::options_description desc_sql("All options");
+    opt::options_description desc_arg("All options");
 
-    desc.add_options()
+    desc_sql.add_options()
             ("hostname,h", opt::value<std::string>()->required(), "MySQL hostname connection")
             ("username,u", opt::value<std::string>()->required()->default_value("root"), "Username for sql server")
             ("password,p", opt::value<std::string>()->required(), "Password for sql server")
             ("help,h", "Produce help message");
+    desc_arg.add_options()
+            ("health, hlt", opt::value<std::string>()->required(), "Current mode of API service(PROD/DEV)")
+            ("help,h", "Produce help message");
 
-    opt::variables_map vm;
+    opt::variables_map vm_sql;
+    opt::variables_map vm_arg;
 
     try {
-        opt::store(opt::parse_config_file<char>("sql.cfg", desc), vm);
+        opt::store(opt::parse_config_file<char>("sql.cfg", desc_sql), vm_sql);
     } catch (const opt::reading_file& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }
 
     try {
-        opt::notify(vm);
+        opt::store(opt::parse_command_line<char>(argc, argv, desc_arg), vm_arg);
+    } catch (const std::logic_error& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return 1;
+    }
+
+    try {
+        opt::notify(vm_sql);
     } catch (const opt::required_option& e) {
         std::cerr << e.what() << std::endl;
         return 2;
     }
 
-    if (vm.count("help")) {
-        std::cout << desc << std::endl;
+    try {
+        opt::notify(vm_arg);
+    } catch (const opt::required_option& e) {
+        std::cerr << e.what() << std::endl;
+        return 2;
+    }
+
+    if (vm_sql.count("help")) {
+        std::cout << desc_sql << std::endl;
         return 1;
+    }
+
+    if (vm_arg.count("help")) {
+        std::cout << desc_arg << std::endl;
+        return 1;
+    }
+
+    if (vm_arg["health"].as<std::string>() != "DEV" && vm_arg["health"].as<std::string>() != "PROD") {
+        std::cerr << "Waiting for PROD/DEV value of 'health' variable but get value - " <<
+        vm_arg["health"].as<std::string>() << '.' << std::endl;
+        return 3;
     }
 
     crow::SimpleApp app;
     dataBase db(
-            vm["hostname"].as<std::string>(),
-            vm["username"].as<std::string>(),
-            vm["password"].as<std::string>(),
+            vm_sql["hostname"].as<std::string>(),
+            vm_sql["username"].as<std::string>(),
+            vm_sql["password"].as<std::string>(),
             "files");
 
 #ifdef TEST_DATABASE
@@ -255,6 +285,10 @@ int main(int argc, char* argv[]) {
         std::filesystem::remove("files/" + username + "/" + filename);
 
         return crow::response("File successful deleted!");
+    });
+
+    CROW_ROUTE(app, "/health").methods(crow::HTTPMethod::GET)([&vm = std::as_const(vm_arg)](){
+        return vm["health"].as<std::string>();
     });
 
     app.bindaddr("127.0.0.1")
