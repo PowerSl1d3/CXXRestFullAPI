@@ -288,7 +288,14 @@ int main(int argc, char* argv[]) {
     });
 
     CROW_ROUTE(app, "/health").methods(crow::HTTPMethod::GET)([&vm = std::as_const(vm_arg)](){
-        return vm["health"].as<std::string>();
+        crow::json::wvalue response;
+        response["health"] = vm["health"].as<std::string>();
+        return response;
+    });
+
+    CROW_ROUTE(app, "/shutdown").methods(crow::HTTPMethod::GET)([&app](){
+        app.stop();
+        return "Server shutdown.";
     });
 
     app.bindaddr("127.0.0.1")
