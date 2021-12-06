@@ -40,6 +40,14 @@ jobs:
         cmake .. -DCROW_BUILD_EXAMPLES=OFF -DCROW_BUILD_TESTS=OFF
         sudo make install
         cd ../../
+        
+    - name: Install CPPLint
+      run: pip install cpplint
+      
+    - name: Check code quality
+      run: |
+        chmod +x scripts/cpplint.sh
+        ./scripts/cpplint.sh
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
