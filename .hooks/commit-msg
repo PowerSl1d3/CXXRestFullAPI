@@ -1,0 +1,9 @@
+#!/bin/bash
+
+commit_msg=$(cat $1)
+regex="\[#[0-9]{1,}\]\s.+"
+if [[ ! "$commit_msg" =~ $regex  ]]; then
+    echo "Invalid format of commit. It should have a format: "[#number_of_commit] task..."
+    exit 1
+fi
+exit 0
