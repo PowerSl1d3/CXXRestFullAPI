@@ -75,6 +75,6 @@ jobs:
       with:
         host: ${{ secrets.SERVER_HOST }}
         user: ${{ secrets.SERVER_USER }}
-        pass: ${{ secrets.SERVER_PASS }}
+        pass: ${{ secrets.SERVER_PASSWORD }}
         run: |
           cd /root/server/CXXRestFullAPI && git pull
