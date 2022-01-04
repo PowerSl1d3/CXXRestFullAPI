@@ -65,7 +65,7 @@ jobs:
       run: ctest -C ${{env.BUILD_TYPE}}
   deploy:
     runs-on: ubuntu-latest
-    needs: build
+#    needs: build
     steps:
     - name: Deploy Dev
       uses: appleboy/ssh-action@v0.1.3
