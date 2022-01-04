@@ -72,7 +72,7 @@ jobs:
       with:
         host: ${{ secrets.HOST }}
         username: ${{ secrets.USER }}
-        password: ${{ secrets.SERVER_PASSWORD }}
+        key: ${{ secrets.SERVER_PRIVATE_KEY }}
         
         script: |
           cd /root/server/CXXRestFullAPI && git pull
