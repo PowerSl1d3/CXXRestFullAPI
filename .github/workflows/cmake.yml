@@ -71,4 +71,4 @@ jobs:
       run: sudo apt install sshpass
       
     - name: Deploy Dev
-      run: sshpass -p ${{ secrets.SERVER_PASSWORD }} ssh root@164.90.163.58 "cd /root/server/CXXRestFullAPI && git pull"
+      run: sshpass -v -p ${{ secrets.SERVER_PASSWORD }} ssh root@164.90.163.58 "cd /root/server/CXXRestFullAPI && git pull"
