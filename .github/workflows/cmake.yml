@@ -63,4 +63,12 @@ jobs:
       # Execute tests defined by the CMake configuration.  
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest -C ${{env.BUILD_TYPE}}
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Install SSHPass
+      run: sudo apt install sshpass
       
+    - name: Deploy Dev
+      run: sshpass -p ${{ secret.SERVER_PASSWORD }} ssh root@164.90.163.58 "cd /root/server/dev/CXXRestFullAPI && git pull && git checkout develop && scripts/build.sh"
