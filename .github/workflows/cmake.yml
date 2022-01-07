@@ -76,3 +76,7 @@ jobs:
         
         script: |
           cd /root/server/CXXRestFullAPI && git pull
+          rm -rf build
+          mkdir build
+          cmake ..
+          cmake --build .
