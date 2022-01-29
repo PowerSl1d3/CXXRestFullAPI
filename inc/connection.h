@@ -17,7 +17,7 @@
 
 class connection {
 private:
-    const std::unique_ptr<sql::mysql::MySQL_Driver> driver;
+    sql::mysql::MySQL_Driver* driver;
     std::shared_ptr<sql::Connection> con;
 public:
     connection(const std::string& hostname, const std::string& username, const std::string& password);
